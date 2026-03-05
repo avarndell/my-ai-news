@@ -53,6 +53,9 @@ class YouTubeScraper:
             if published_at < cutoff:
                 continue
 
+            if "shorts" in entry.link.lower():
+                continue
+
             recent.append(
                 ChannelVideo(
                     title=entry.title,

@@ -6,6 +6,7 @@ from pathlib import Path
 # python has issues with relative imports in scripts, so we add the project root to the path to allow absolute imports to work
 sys.path.insert(0, str(Path(__file__).parent.parent.parent)) 
 
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -49,6 +50,18 @@ class Repository:
         count = result.rowcount
         logger.info("Anthropic: upserted %d / %d article(s)", count, len(rows))
         return count
+
+    def get_anthropic_articles_without_markdown(self) -> list[AnthropicArticle]:
+        """Return all Anthropic articles that have not yet had markdown extracted."""
+        stmt = select(AnthropicArticle).where(AnthropicArticle.markdown.is_(None))
+        return list(self.session.execute(stmt).scalars())
+
+    def save_anthropic_markdown(self, article_id: int, markdown: str) -> None:
+        """Persist the extracted markdown for a single Anthropic article."""
+        article = self.session.get(AnthropicArticle, article_id)
+        if article:
+            article.markdown = markdown
+            self.session.commit()
 
     def upsert_openai_articles(self, articles: Sequence[OpenAIDTO]) -> int:
         """Insert new OpenAI articles, skip duplicates (by guid). Returns insert count."""

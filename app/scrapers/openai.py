@@ -59,4 +59,7 @@ class OpenAIScraper:
         logger.info("OpenAI: %d article(s) in the last %d hours", len(recent), hours)
         return recent
 
-    # open ai doesn't allow scraping the full article content, so we have to convert the URL to markdown using a third-party library
+    #
+if __name__ == "__main__":
+    scraper = OpenAIScraper()
+    articles: List[OpenAIArticle] = scraper.fetch_recent_articles(hours=200)

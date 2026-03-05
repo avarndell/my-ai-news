@@ -4,22 +4,32 @@ import sys
 from pathlib import Path
 
 # python has issues with relative imports in scripts, so we add the project root to the path to allow absolute imports to work
-sys.path.insert(0, str(Path(__file__).parent.parent.parent)) 
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session  # used in type hint only
 
-from app.database.models import AnthropicArticle, OpenAIArticle, YoutubeVideo
+from app.database.connection import get_session
+from app.database.models import AnthropicArticle, Digest, OpenAIArticle, YoutubeVideo
 from app.scrapers.anthropic import AnthropicArticle as AnthropicDTO
 from app.scrapers.openai import OpenAIArticle as OpenAIDTO
 from app.scrapers.youtube import ChannelVideo
 
 logger = logging.getLogger(__name__)
 
+
 class Repository:
-    def __init__(self, session: Session):
-        self.session = session
+    def __init__(self):
+        self._cm = get_session()
+        self.session: Session | None = None
+
+    def __enter__(self) -> "Repository":
+        self.session = self._cm.__enter__()
+        return self
+
+    def __exit__(self, *args) -> None:
+        self._cm.__exit__(*args)
 
     def upsert_anthropic_articles(self, articles: Sequence[AnthropicDTO]) -> int:
         """Insert new Anthropic articles, skip duplicates (by guid). Returns insert count."""
@@ -41,9 +51,11 @@ class Repository:
         stmt = insert(AnthropicArticle).values(rows)
         stmt = stmt.on_conflict_do_update(
             index_elements=["guid"],
-            set_={"title": stmt.excluded.title,
-                  "description": stmt.excluded.description,
-                  "category": stmt.excluded.category},
+            set_={
+                "title": stmt.excluded.title,
+                "description": stmt.excluded.description,
+                "category": stmt.excluded.category,
+            },
         )
         result = self.session.execute(stmt)
         self.session.commit()
@@ -83,9 +95,11 @@ class Repository:
         stmt = insert(OpenAIArticle).values(rows)
         stmt = stmt.on_conflict_do_update(
             index_elements=["guid"],
-            set_={"title": stmt.excluded.title,
-                  "description": stmt.excluded.description,
-                  "category": stmt.excluded.category},
+            set_={
+                "title": stmt.excluded.title,
+                "description": stmt.excluded.description,
+                "category": stmt.excluded.category,
+            },
         )
         result = self.session.execute(stmt)
         self.session.commit()
@@ -105,7 +119,9 @@ class Repository:
             video.transcript = transcript
             self.session.commit()
 
-    def upsert_youtube_videos(self, videos: Sequence[ChannelVideo], channel_name: str | None = None) -> int:
+    def upsert_youtube_videos(
+        self, videos: Sequence[ChannelVideo], channel_name: str | None = None
+    ) -> int:
         """Insert new YouTube videos, skip duplicates (by video_id). Returns insert count."""
         if not videos:
             return 0
@@ -126,12 +142,58 @@ class Repository:
         stmt = insert(YoutubeVideo).values(rows)
         stmt = stmt.on_conflict_do_update(
             index_elements=["video_id"],
-            set_={"title": stmt.excluded.title,
-                  "description": stmt.excluded.description,
-                  "channel_name": stmt.excluded.channel_name},
+            set_={
+                "title": stmt.excluded.title,
+                "description": stmt.excluded.description,
+                "channel_name": stmt.excluded.channel_name,
+            },
         )
         result = self.session.execute(stmt)
         self.session.commit()
         count = result.rowcount
         logger.info("YouTube: upserted %d / %d video(s)", count, len(rows))
         return count
+
+    # ── Digest ────────────────────────────────────────────────────────────────
+
+    def _digested_ids(self, source_type: str) -> set[int]:
+        stmt = select(Digest.source_id).where(Digest.source_type == source_type)
+        return set(self.session.execute(stmt).scalars())
+
+    def get_undigested_anthropic_articles(self) -> list[AnthropicArticle]:
+        done = self._digested_ids("anthropic")
+        stmt = select(AnthropicArticle).where(
+            AnthropicArticle.id.not_in(done) if done else True
+        )
+        return list(self.session.execute(stmt).scalars())
+
+    def get_undigested_openai_articles(self) -> list[OpenAIArticle]:
+        done = self._digested_ids("openai")
+        stmt = select(OpenAIArticle).where(
+            OpenAIArticle.id.not_in(done) if done else True
+        )
+        return list(self.session.execute(stmt).scalars())
+
+    def get_undigested_youtube_videos(self) -> list[YoutubeVideo]:
+        done = self._digested_ids("youtube")
+        stmt = select(YoutubeVideo).where(
+            YoutubeVideo.id.not_in(done) if done else True
+        )
+        return list(self.session.execute(stmt).scalars())
+
+    def save_digest(
+        self, source_type: str, source_id: int, url: str, title: str, summary: str
+    ) -> None:
+        stmt = (
+            insert(Digest)
+            .values(
+                source_type=source_type,
+                source_id=source_id,
+                url=url,
+                title=title,
+                summary=summary,
+            )
+            .on_conflict_do_nothing(index_elements=["source_type", "source_id"])
+        )
+        self.session.execute(stmt)
+        self.session.commit()

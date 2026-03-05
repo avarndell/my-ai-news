@@ -1,6 +1,5 @@
 import logging
 
-from app.database.connection import get_session
 from app.database.repository import Repository
 from app.scrapers.anthropic import AnthropicScraper
 
@@ -12,8 +11,7 @@ def process_anthropic_markdown() -> None:
     """Fetch and store markdown for all Anthropic articles that don't have it yet."""
     scraper = AnthropicScraper()
 
-    with get_session() as session:
-        repo = Repository(session)
+    with Repository() as repo:
         articles = repo.get_anthropic_articles_without_markdown()
         logger.info("Anthropic: %d article(s) need markdown extraction", len(articles))
 

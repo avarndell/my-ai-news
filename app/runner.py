@@ -3,7 +3,6 @@ from dataclasses import dataclass
 
 from app.config import LOOKBACK_HOURS, YOUTUBE_CHANNELS
 from app.database.repository import Repository
-from app.database.connection import get_session
 from app.scrapers.anthropic import AnthropicArticle, AnthropicScraper
 from app.scrapers.openai import OpenAIArticle, OpenAIScraper
 from app.scrapers.youtube import ChannelVideo, YouTubeScraper
@@ -28,8 +27,7 @@ def run(hours: int = LOOKBACK_HOURS) -> RunResult:
 
     youtube_videos: list[ChannelVideo] = []
     yt = YouTubeScraper()
-    with get_session() as session:
-        repo = Repository(session)
+    with Repository() as repo:
         repo.upsert_anthropic_articles(anthropic_articles)
         repo.upsert_openai_articles(openai_articles)
 

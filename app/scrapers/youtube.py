@@ -1,15 +1,29 @@
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 
 import feedparser
+from dotenv import load_dotenv
 from pydantic import BaseModel
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import CouldNotRetrieveTranscript
+from youtube_transcript_api.proxies import WebshareProxyConfig
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 _RSS_URL = "https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
+
+
+def _build_proxy_config() -> WebshareProxyConfig | None:
+    username = os.getenv("WEBSHARE_PROXY_USERNAME")
+    password = os.getenv("WEBSHARE_PROXY_PASSWORD")
+    if username and password:
+        logger.info("YouTube: using Webshare proxy")
+        return WebshareProxyConfig(proxy_username=username, proxy_password=password)
+    return None
 
 
 class ChannelVideo(BaseModel):
@@ -27,6 +41,16 @@ class Transcript(BaseModel):
 
 class YouTubeScraper:
     """Scraper for YouTube channels and video transcripts (no API key required)."""
+    def __init__(self):
+        proxy_config = None
+        proxy_username = os.getenv("WEBSHARE_PROXY_USERNAME")
+        proxy_password = os.getenv("WEBSHARE_PROXY_PASSWORD")
+        
+        if proxy_username and proxy_password:
+            logger.info("YouTubeScraper: using proxy configuration")
+            proxy_config = WebshareProxyConfig(proxy_username=proxy_username, proxy_password=proxy_password)
+                    
+        self.transcript_api = YouTubeTranscriptApi(proxy_config= proxy_config)
 
     def fetch_recent_videos(
         self, channel_id: str, hours: int = 24
@@ -82,7 +106,7 @@ class YouTubeScraper:
         Returns None if the transcript is unavailable or blocked.
         """
         try:
-            fetched = YouTubeTranscriptApi().fetch(video_id, languages=languages)
+            fetched = YouTubeTranscriptApi(proxy_config=_build_proxy_config()).fetch(video_id, languages=languages)
             text = " ".join(snippet.text for snippet in fetched)
             return Transcript(text=text)
         except CouldNotRetrieveTranscript as exc:

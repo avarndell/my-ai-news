@@ -15,12 +15,11 @@ def process_anthropic_markdown() -> None:
     with get_session() as session:
         repo = Repository(session)
         articles = repo.get_anthropic_articles_without_markdown()
-
         logger.info("Anthropic: %d article(s) need markdown extraction", len(articles))
 
-        for article in articles:  
-            markdown = scraper.url_to_markdown(article.url)
+        for article in articles:
             try:
+                markdown = scraper.url_to_markdown(article.url)
                 if markdown:
                     repo.save_anthropic_markdown(article.id, markdown)
                     logger.info("Saved markdown for: %s", article.title)

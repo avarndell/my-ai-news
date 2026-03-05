@@ -1,9 +1,12 @@
 import os
+from contextlib import contextmanager
+
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from dotenv import load_dotenv
 
 load_dotenv()
+
 
 def get_database_url() -> str:
     user = os.getenv("POSTGRES_USER", "postgres")
@@ -13,9 +16,16 @@ def get_database_url() -> str:
     db = os.getenv("POSTGRES_DB", "ai_news_aggregator")
     return f"postgresql://{user}:{password}@{host}:{port}/{db}"
 
+
 engine = create_engine(get_database_url())
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
+@contextmanager
 def get_session():
-    return SessionLocal()
+    session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
 

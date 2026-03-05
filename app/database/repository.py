@@ -93,6 +93,18 @@ class Repository:
         logger.info("OpenAI: upserted %d / %d article(s)", count, len(rows))
         return count
 
+    def get_youtube_videos_without_transcript(self) -> list[YoutubeVideo]:
+        """Return all YouTube videos that have not yet had a transcript fetched."""
+        stmt = select(YoutubeVideo).where(YoutubeVideo.transcript.is_(None))
+        return list(self.session.execute(stmt).scalars())
+
+    def save_youtube_transcript(self, video_id: int, transcript: str) -> None:
+        """Persist the transcript (or unavailability marker) for a single YouTube video."""
+        video = self.session.get(YoutubeVideo, video_id)
+        if video:
+            video.transcript = transcript
+            self.session.commit()
+
     def upsert_youtube_videos(self, videos: Sequence[ChannelVideo], channel_name: str | None = None) -> int:
         """Insert new YouTube videos, skip duplicates (by video_id). Returns insert count."""
         if not videos:

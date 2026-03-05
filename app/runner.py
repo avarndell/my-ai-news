@@ -2,6 +2,8 @@ import logging
 from dataclasses import dataclass
 
 from app.config import LOOKBACK_HOURS, YOUTUBE_CHANNELS
+from app.database.repository import Repository
+from app.database.connection import get_session
 from app.scrapers.anthropic import AnthropicArticle, AnthropicScraper
 from app.scrapers.openai import OpenAIArticle, OpenAIScraper
 from app.scrapers.youtube import ChannelVideo, YouTubeScraper
@@ -18,25 +20,29 @@ class RunResult:
 
 
 def run(hours: int = LOOKBACK_HOURS) -> RunResult:
-    """Fetch recent content from all sources for the last `hours` hours."""
+    """Fetch recent content from all sources and persist to the database."""
     logger.info("Running scrapers for the last %d hours", hours)
 
     anthropic_articles = AnthropicScraper().fetch_recent_articles(hours=hours)
-
     openai_articles = OpenAIScraper().fetch_recent_articles(hours=hours)
 
     youtube_videos: list[ChannelVideo] = []
     yt = YouTubeScraper()
-    
-    for channel in YOUTUBE_CHANNELS:
-        if not channel["channel_id"]:
-            logger.warning("Skipping YouTube channel '%s' — no channel_id configured", channel["name"])
-            continue
-        try:
-            videos = yt.fetch_recent_videos(channel_id=channel["channel_id"], hours=hours)
-            youtube_videos.extend(videos)
-        except Exception as exc:
-            logger.warning("Failed to fetch YouTube channel '%s': %s", channel["name"], exc)
+    with get_session() as session:
+        repo = Repository(session)
+        repo.upsert_anthropic_articles(anthropic_articles)
+        repo.upsert_openai_articles(openai_articles)
+
+        for channel in YOUTUBE_CHANNELS:
+            if not channel["channel_id"]:
+                logger.warning("Skipping YouTube channel '%s' — no channel_id configured", channel["name"])
+                continue
+            try:
+                videos = yt.fetch_recent_videos(channel_id=channel["channel_id"], hours=hours)
+                repo.upsert_youtube_videos(videos, channel_name=channel["name"])
+                youtube_videos.extend(videos)
+            except Exception as exc:
+                logger.warning("Failed to fetch YouTube channel '%s': %s", channel["name"], exc)
 
     result = RunResult(
         anthropic=anthropic_articles,

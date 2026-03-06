@@ -16,6 +16,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from app.database.connection import engine
+from app.database.models import Base
 from app.runner import run
 from app.services.anthropic_processor import process_anthropic_markdown
 from app.services.digest_processor import process_digest
@@ -31,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 def run_daily_pipeline(hours: int = 24, top_n: int = 10) -> dict:
+    Base.metadata.create_all(engine)
     logger.info("=== Pipeline started (lookback: %dh) ===", hours)
 
     # Step 1 — Scrape

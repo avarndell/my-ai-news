@@ -8,34 +8,19 @@ services:
   - type: cron
     name: ai-news-pipeline
     runtime: docker
+    region: virginia
     schedule: "0 7 * * *"
     dockerfilePath: ./Dockerfile
     envVars:
       - key: OPENAPI_API_KEY
         sync: false
       - key: OPENAPI_MODEL
-        value: gpt-4o
+        value: gpt-5.2
       - key: GMAIL_APP_PASSWORD
         sync: false
       - key: EMAIL_SENDER
         sync: false
-      - key: POSTGRES_HOST
+      - key: DATABASE_URL
         fromDatabase:
           name: ainews-db
-          property: host
-      - key: POSTGRES_PORT
-        fromDatabase:
-          name: ainews-db
-          property: port
-      - key: POSTGRES_USER
-        fromDatabase:
-          name: ainews-db
-          property: user
-      - key: POSTGRES_PASSWORD
-        fromDatabase:
-          name: ainews-db
-          property: password
-      - key: POSTGRES_DB
-        fromDatabase:
-          name: ainews-db
-          property: database
+          property: connectionString

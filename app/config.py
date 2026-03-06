@@ -2,5 +2,5 @@
 # and search for "channelId" — or use a tool like https://commentpicker.com/youtube-channel-id.php
 YOUTUBE_CHANNELS = [
     {"name": "mathewBerman", "channel_id": "UCawZsQWqfGSbCI5yjkdVkTA"},
-    {"name": "OpenAI", "channel_id": ""},
+    {"name": "Matt Wolfe", "channel_id": "UChpleBmo18P08aKCIgti38g"},
 ]

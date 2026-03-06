@@ -6,6 +6,8 @@ from pathlib import Path
 # python has issues with relative imports in scripts, so we add the project root to the path to allow absolute imports to work
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+from datetime import datetime, timedelta, timezone
+
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session  # used in type hint only
@@ -179,6 +181,11 @@ class Repository:
         stmt = select(YoutubeVideo).where(
             YoutubeVideo.id.not_in(done) if done else True
         )
+        return list(self.session.execute(stmt).scalars())
+
+    def get_recent_digests(self, hours: int = 24) -> list[Digest]:
+        cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=hours)
+        stmt = select(Digest).where(Digest.created_at >= cutoff).order_by(Digest.created_at.desc())
         return list(self.session.execute(stmt).scalars())
 
     def save_digest(

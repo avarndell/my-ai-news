@@ -27,8 +27,8 @@ Rules:
 
 class DigestAgent:
     def __init__(self):
-        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        self.model = os.getenv("OPENAI_MODEL")
+        self.client = OpenAI(api_key=os.getenv("OPENAPI_API_KEY"))
+        self.model = os.getenv("OPENAPI_MODEL")
 
     def create_digest(self, content: str, source_title: str) -> DigestOutput | None:
         """

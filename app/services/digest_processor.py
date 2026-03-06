@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.agents.digest_agent import DigestAgent
 from app.database.repository import Repository
-from app.services.processor_youtube import TRANSCRIPT_UNAVAILABLE
+from app.services.youtube_processor import TRANSCRIPT_UNAVAILABLE
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

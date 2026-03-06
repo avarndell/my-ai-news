@@ -1,10 +1,9 @@
 import logging
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
-from typing import List, Optional
+from typing import List
 
 import feedparser
-from docling.document_converter import DocumentConverter
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)

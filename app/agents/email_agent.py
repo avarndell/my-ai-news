@@ -67,12 +67,6 @@ class EmailAgent:
         self.model = os.getenv("OPENAPI_MODEL")
 
     def create_intro(self, name: str, date: str, top_articles: list[dict]) -> EmailIntro | None:
-        """
-        Generate greeting and introduction paragraph for the briefing.
-
-        `top_articles` is a list of dicts with keys: rank, title, summary, relevance_score.
-        Returns an EmailIntro or None on failure.
-        """
         articles_text = "\n".join(
             f"{a['rank']}. {a['title']} (score: {a['relevance_score']:.1f})"
             for a in top_articles

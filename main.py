@@ -1,11 +1,11 @@
 import argparse
 
 from app.runner import run
-from app.services.processor_anthropic import process_anthropic_markdown
-from app.services.processor_curator import process_curator
-from app.services.processor_digest import process_digest
-from app.services.processor_email import process_email
-from app.services.processor_youtube import process_youtube_transcripts
+from app.services.anthropic_processor import process_anthropic_markdown
+from app.services.curator_processor import process_curator
+from app.services.digest_processor import process_digest
+from app.services.email_processor import process_email
+from app.services.youtube_processor import process_youtube_transcripts
 
 
 def main():

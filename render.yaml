@@ -8,7 +8,6 @@ services:
   - type: cron
     name: ai-news-pipeline
     runtime: docker
-    region: virginia
     schedule: "0 7 * * *"
     dockerfilePath: ./Dockerfile
     envVars:

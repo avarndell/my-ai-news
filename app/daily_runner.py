@@ -34,13 +34,13 @@ logger = logging.getLogger(__name__)
 
 def run_daily_pipeline(hours: int = 24, top_n: int = 10) -> dict:
     try:
-        with engine.begin() as conn:
+        with engine.begin():
             Base.metadata.create_all(engine)
             logger.info("Database tables verified/created")
     except Exception as exc:
         logger.error("Database table creation failed: %s", exc)
         return {"success": False, "error": str(exc)}
-    
+
     logger.info("=== Pipeline started (lookback: %dh) ===", hours)
     # Step 1 — Scrape
     logger.info("--- Step 1: Scraping sources ---")
@@ -48,7 +48,9 @@ def run_daily_pipeline(hours: int = 24, top_n: int = 10) -> dict:
         result = run(hours=hours)
         logger.info(
             "Scraped — Anthropic: %d, OpenAI: %d, YouTube: %d",
-            len(result.anthropic), len(result.openai), len(result.youtube),
+            len(result.anthropic),
+            len(result.openai),
+            len(result.youtube),
         )
     except Exception as exc:
         logger.error("Scrape failed: %s", exc)

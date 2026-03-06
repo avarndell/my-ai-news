@@ -9,6 +9,7 @@ from app.agents.curator_agent import CuratorAgent
 from app.agents.email_agent import BriefingArticle, EmailAgent, EmailBriefing
 from app.agents.user_profile import DEFAULT_PROFILE, PROFILES
 from app.database.repository import Repository
+from app.services.email_sender import send_briefing
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -90,7 +91,7 @@ def process_email(hours: int = 24, profile: str = DEFAULT_PROFILE) -> EmailBrief
         top_n=len(briefing_articles),
     )
 
-    print(briefing.to_markdown())
+    send_briefing(briefing)
     return briefing
 
 

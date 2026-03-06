@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 TOP_N = 10
 
 
-def process_email(hours: int = 24, profile: str = DEFAULT_PROFILE) -> EmailBriefing | None:
-    """Run curator → take top 10 → generate email briefing as a structured Pydantic model."""
+def process_email(hours: int = 24, profile: str = DEFAULT_PROFILE, top_n: int = TOP_N) -> EmailBriefing | None:
+    """Run curator → take top N → generate email briefing as a structured Pydantic model."""
     curator = CuratorAgent()
     email_agent = EmailAgent()
 
@@ -56,7 +56,7 @@ def process_email(hours: int = 24, profile: str = DEFAULT_PROFILE) -> EmailBrief
         logger.warning("Curator returned no results.")
         return None
 
-    top_articles = sorted(ranked.articles, key=lambda a: a.rank)[:TOP_N]
+    top_articles = sorted(ranked.articles, key=lambda a: a.rank)[:top_n]
     digest_lookup = {f"{d.source_type}:{d.id}": d for d in digests}
 
     briefing_articles = []

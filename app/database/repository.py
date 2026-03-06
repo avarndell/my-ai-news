@@ -179,17 +179,23 @@ class Repository:
     def get_undigested_youtube_videos(self) -> list[YoutubeVideo]:
         done = self._digested_ids("youtube")
         stmt = select(YoutubeVideo).where(
-            YoutubeVideo.id.not_in(done) if done else True
+            YoutubeVideo.transcript.isnot(None),
+            YoutubeVideo.id.not_in(done) if done else True,
         )
         return list(self.session.execute(stmt).scalars())
 
     def get_recent_digests(self, hours: int = 24) -> list[Digest]:
         cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=hours)
-        stmt = select(Digest).where(Digest.created_at >= cutoff).order_by(Digest.created_at.desc())
+        stmt = (
+            select(Digest)
+            .where(Digest.published_at >= cutoff)
+            .order_by(Digest.published_at.desc())
+        )
         return list(self.session.execute(stmt).scalars())
 
     def save_digest(
-        self, source_type: str, source_id: int, url: str, title: str, summary: str
+        self, source_type: str, source_id: int, url: str, title: str, summary: str,
+        published_at: datetime | None = None,
     ) -> None:
         stmt = (
             insert(Digest)
@@ -199,6 +205,7 @@ class Repository:
                 url=url,
                 title=title,
                 summary=summary,
+                published_at=published_at,
             )
             .on_conflict_do_nothing(index_elements=["source_type", "source_id"])
         )

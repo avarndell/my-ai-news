@@ -1,11 +1,12 @@
 import os
 from contextlib import contextmanager
+from pathlib import Path
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-load_dotenv()
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 
 def get_database_url() -> str:
@@ -17,7 +18,7 @@ def get_database_url() -> str:
     return f"postgresql://{user}:{password}@{host}:{port}/{db}"
 
 
-engine = create_engine(get_database_url())
+engine = create_engine(get_database_url(), connect_args={"options": "-c search_path=public"})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

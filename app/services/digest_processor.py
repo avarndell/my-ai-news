@@ -36,7 +36,7 @@ def process_digest(limit: Optional[int] = None) -> dict:
                 content = article.markdown or article.description
                 result = agent.create_digest(content, article.title)
                 if result:
-                    repo.save_digest("anthropic", article.id, article.url, result.title, result.summary)
+                    repo.save_digest("anthropic", article.id, article.url, result.title, result.summary, article.published_at)
                     logger.info("[Anthropic] Digested: %s", article.title)
                     processed += 1
             except Exception as exc:
@@ -48,7 +48,7 @@ def process_digest(limit: Optional[int] = None) -> dict:
                 content = article.description
                 result = agent.create_digest(content, article.title)
                 if result:
-                    repo.save_digest("openai", article.id, article.url, result.title, result.summary)
+                    repo.save_digest("openai", article.id, article.url, result.title, result.summary, article.published_at)
                     logger.info("[OpenAI] Digested: %s", article.title)
                     processed += 1
             except Exception as exc:
@@ -60,7 +60,7 @@ def process_digest(limit: Optional[int] = None) -> dict:
                 content = video.description if video.transcript == TRANSCRIPT_UNAVAILABLE else (video.transcript or video.description)
                 result = agent.create_digest(content, video.title)
                 if result:
-                    repo.save_digest("youtube", video.id, video.url, result.title, result.summary)
+                    repo.save_digest("youtube", video.id, video.url, result.title, result.summary, video.published_at)
                     logger.info("[YouTube] Digested: %s", video.title)
                     processed += 1
             except Exception as exc:

@@ -33,7 +33,7 @@ def _briefing_to_html(briefing: EmailBriefing) -> str:
 
     return f"""<!DOCTYPE html>
 <html>
-<body style="font-family: Georgia, serif; max-width: 620px; margin: auto; padding: 32px 24px; color: #222; line-height: 1.6;">
+<body style="font-family: arial, serif; max-width: 620px; margin: auto; padding: 32px 24px; color: #222; line-height: 1.6;">
     <h1 style="font-size: 18px; font-weight: bold; letter-spacing: 0.5px; border-bottom: 2px solid #222; padding-bottom: 10px; margin-bottom: 20px;">
         AI News Briefing
     </h1>

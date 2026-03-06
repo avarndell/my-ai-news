@@ -6,7 +6,7 @@ Daily pipeline runner — runs the full end-to-end pipeline:
   3. Digest       — generate AI summaries for all unprocessed items
   4. Email        — rank by user profile and send the daily briefing
 
-Run directly:   python app/pipeline.py
+Run directly:   python app/daily_runner.py
 Schedule daily: add to cron or Task Scheduler pointing at this file.
 """
 
@@ -16,7 +16,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.config import LOOKBACK_HOURS
 from app.runner import run
 from app.services.anthropic_processor import process_anthropic_markdown
 from app.services.digest_processor import process_digest
@@ -31,7 +30,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def run_pipeline(hours: int = LOOKBACK_HOURS) -> None:
+def run_daily_pipeline(hours: int = 24, top_n: int = 10) -> dict:
     logger.info("=== Pipeline started (lookback: %dh) ===", hours)
 
     # Step 1 — Scrape
@@ -44,7 +43,7 @@ def run_pipeline(hours: int = LOOKBACK_HOURS) -> None:
         )
     except Exception as exc:
         logger.error("Scrape failed: %s", exc)
-        return
+        return {"success": False, "error": str(exc)}
 
     # Step 2 — Process markdown and transcripts
     logger.info("--- Step 2: Extracting markdown and transcripts ---")
@@ -64,18 +63,19 @@ def run_pipeline(hours: int = LOOKBACK_HOURS) -> None:
         process_digest()
     except Exception as exc:
         logger.error("Digest processing failed: %s", exc)
-        return
+        return {"success": False, "error": str(exc)}
 
     # Step 4 — Curate and send email
     logger.info("--- Step 4: Sending email briefing ---")
     try:
-        process_email(hours=hours)
+        process_email(hours=hours, top_n=top_n)
     except Exception as exc:
         logger.error("Email processing failed: %s", exc)
-        return
+        return {"success": False, "error": str(exc)}
 
     logger.info("=== Pipeline complete ===")
+    return {"success": True}
 
 
 if __name__ == "__main__":
-    run_pipeline()
+    run_daily_pipeline()

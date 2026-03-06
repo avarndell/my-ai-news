@@ -1,57 +1,35 @@
-import argparse
+import sys
+from pathlib import Path
 
-from app.runner import run
-from app.services.anthropic_processor import process_anthropic_markdown
-from app.services.curator_processor import process_curator
-from app.services.digest_processor import process_digest
-from app.services.email_processor import process_email
-from app.services.youtube_processor import process_youtube_transcripts
+# python has issues with relative imports in scripts, so we add the project root to the path to allow absolute imports to work
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+from app.daily_runner import run_daily_pipeline
 
 
-def main():
-    parser = argparse.ArgumentParser(description="AI News pipeline")
-    parser.add_argument(
-        "command",
-        choices=["scrape", "process:anthropic", "process:youtube", "process:digest", "process:curator", "process:email"],
-        help=(
-            "scrape            — fetch and store new articles/videos\n"
-            "process:anthropic — extract markdown from Anthropic articles\n"
-            "process:youtube   — fetch YouTube transcripts\n"
-            "process:digest    — generate AI summaries for all unprocessed items\n"
-            "process:curator   — rank recent digests by user profile relevance\n"
-            "process:email     — generate ranked email briefing with intro"
-        ),
-    )
-    parser.add_argument(
-        "--hours", type=int, default=24, help="Lookback window in hours (default: 24)"
-    )
-    parser.add_argument(
-        "--profile", type=str, default=None, help="User profile name for curator (default: from user_profile.py)"
-    )
-    args = parser.parse_args()
-
-    if args.command == "scrape":
-        result = run(hours=args.hours)
-        print(f"Anthropic: {len(result.anthropic)} article(s)")
-        print(f"YouTube:   {len(result.youtube)} video(s)")
-    elif args.command == "process:anthropic":
-        process_anthropic_markdown()
-    elif args.command == "process:youtube":
-        process_youtube_transcripts()
-    elif args.command == "process:digest":
-        process_digest()
-    elif args.command == "process:curator":
-        kwargs = {"hours": args.hours}
-        if args.profile:
-            kwargs["profile"] = args.profile
-        process_curator(**kwargs)
-    elif args.command == "process:email":
-        kwargs = {"hours": args.hours}
-        if args.profile:
-            kwargs["profile"] = args.profile
-        process_email(**kwargs)
+def main(hours: int = 24, top_n: int = 10):
+    return run_daily_pipeline(hours=hours, top_n=top_n)
 
 
 if __name__ == "__main__":
-    main()
-# run on command line: python main.py scrape --hours 200
+    import sys
+
+    hours = 24
+    top_n = 10
+
+    if len(sys.argv) > 1:
+        try:
+            hours = int(sys.argv[1])
+        except ValueError:
+            print("Invalid hours argument, using default of 24.")
+            hours = 24
+
+    if len(sys.argv) > 2:
+        try:
+            top_n = int(sys.argv[2])
+        except ValueError:
+            print("Invalid top_n argument, using default of 10.")
+            top_n = 10
+
+    result = main(hours=hours, top_n=top_n)
+    sys.exit(0 if result["success"] else 1)

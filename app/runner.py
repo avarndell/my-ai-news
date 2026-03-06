@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass
 
-from app.config import LOOKBACK_HOURS, YOUTUBE_CHANNELS
+from app.config import YOUTUBE_CHANNELS
 from app.database.repository import Repository
 from app.scrapers.anthropic import AnthropicArticle, AnthropicScraper
 from app.scrapers.openai import OpenAIArticle, OpenAIScraper
@@ -18,7 +18,7 @@ class RunResult:
     youtube: list[ChannelVideo]
 
 
-def run(hours: int = LOOKBACK_HOURS) -> RunResult:
+def run(hours: int = 24) -> RunResult:
     """Fetch recent content from all sources and persist to the database."""
     logger.info("Running scrapers for the last %d hours", hours)
 

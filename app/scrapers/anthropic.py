@@ -5,7 +5,8 @@ from typing import List, Optional
 from zoneinfo import ZoneInfo
 
 import feedparser
-from docling.document_converter import DocumentConverter
+import requests
+from html_to_markdown import convert
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -82,9 +83,9 @@ class AnthropicScraper:
     def url_to_markdown(self, url: str) -> Optional[str]:
         """Fetch article content from a URL and return it as markdown."""
         logger.info("Converting article to markdown: %s", url)
-        converter = DocumentConverter()
-        result = converter.convert(url)
-        return result.document.export_to_markdown()
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        return convert(response.text)
     
 if __name__ == "__main__":
     scraper = AnthropicScraper()

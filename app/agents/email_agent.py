@@ -1,26 +1,64 @@
 import logging
 import os
+from typing import List
 
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """You are writing the opening introduction for a personalized daily AI news briefing email.
+SYSTEM_PROMPT = """You are writing the opening of a personalized daily AI news briefing email.
 
-Your introduction should:
-- Address the reader by name
-- Mention today's date
-- Give a warm, 2-3 sentence preview of the key themes in today's top articles
-- Be professional but conversational in tone
-- Not list or enumerate the articles — just set the stage for what is coming
-
-Keep it concise. No sign-off or subject line — just the opening paragraph.
+Produce two fields:
+- greeting: a short salutation addressing the reader by name (e.g. "Hey Alex,")
+- introduction: 2-3 sentences previewing the key themes in today's top articles.
+  Mention the date. Be professional but conversational. Do not list or enumerate articles.
 """
 
 
 class EmailIntro(BaseModel):
-    introduction: str = Field(description="Opening paragraph for the daily AI news briefing email")
+    greeting: str = Field(description="Short salutation addressing the reader by name")
+    introduction: str = Field(description="2-3 sentence preview of today's top AI news themes")
+
+
+class BriefingArticle(BaseModel):
+    rank: int = Field(description="Rank position (1 = most relevant)")
+    title: str = Field(description="Article title")
+    summary: str = Field(description="2-3 sentence summary of the article")
+    url: str = Field(description="URL to the original article")
+    relevance_score: float = Field(description="Relevance score from 0.0 to 10.0")
+
+
+class EmailBriefing(BaseModel):
+    greeting: str
+    introduction: str
+    articles: List[BriefingArticle]
+    total_ranked: int = Field(description="Total number of articles ranked by the curator")
+    top_n: int = Field(description="Number of articles included in this briefing")
+
+    def to_markdown(self) -> str:
+        lines = [
+            "# AI News Briefing",
+            "",
+            self.greeting,
+            "",
+            self.introduction,
+            "",
+            "---",
+            "",
+        ]
+        for article in self.articles:
+            lines += [
+                f"## {article.title}",
+                "",
+                article.summary,
+                "",
+                f"[Read more]({article.url})",
+                "",
+                "---",
+                "",
+            ]
+        return "\n".join(lines)
 
 
 class EmailAgent:
@@ -30,7 +68,7 @@ class EmailAgent:
 
     def create_intro(self, name: str, date: str, top_articles: list[dict]) -> EmailIntro | None:
         """
-        Generate an intro paragraph for the email briefing.
+        Generate greeting and introduction paragraph for the briefing.
 
         `top_articles` is a list of dicts with keys: rank, title, summary, relevance_score.
         Returns an EmailIntro or None on failure.

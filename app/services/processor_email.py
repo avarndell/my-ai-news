@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.agents.curator_agent import CuratorAgent
-from app.agents.email_agent import EmailAgent
+from app.agents.email_agent import BriefingArticle, EmailAgent, EmailBriefing
 from app.agents.user_profile import DEFAULT_PROFILE, PROFILES
 from app.database.repository import Repository
 
@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 TOP_N = 10
 
 
-def process_email(hours: int = 24, profile: str = DEFAULT_PROFILE) -> None:
-    """Run curator → take top 10 → generate email intro and print the briefing."""
+def process_email(hours: int = 24, profile: str = DEFAULT_PROFILE) -> EmailBriefing | None:
+    """Run curator → take top 10 → generate email briefing as a structured Pydantic model."""
     curator = CuratorAgent()
     email_agent = EmailAgent()
 
@@ -30,7 +30,7 @@ def process_email(hours: int = 24, profile: str = DEFAULT_PROFILE) -> None:
 
     if not digests:
         logger.info("No digests found in the last %d hours.", hours)
-        return
+        return None
 
     logger.info("Email: found %d digest(s), running curator for profile '%s'", len(digests), profile)
 
@@ -49,49 +49,49 @@ def process_email(hours: int = 24, profile: str = DEFAULT_PROFILE) -> None:
         ranked = curator.score(digest_dicts, profile=profile)
     except Exception as exc:
         logger.error("Curator failed: %s", exc)
-        return
+        return None
 
     if not ranked or not ranked.articles:
         logger.warning("Curator returned no results.")
-        return
+        return None
 
     top_articles = sorted(ranked.articles, key=lambda a: a.rank)[:TOP_N]
-
-    # Build lookup for title/summary/url from digest_id
     digest_lookup = {f"{d.source_type}:{d.id}": d for d in digests}
 
-    top_with_content = []
+    briefing_articles = []
+    top_for_intro = []
     for item in top_articles:
         digest = digest_lookup.get(item.digest_id)
-        top_with_content.append({
+        briefing_articles.append(BriefingArticle(
+            rank=item.rank,
+            title=digest.title if digest else item.digest_id,
+            summary=digest.summary if digest else "",
+            url=digest.url if digest else "",
+            relevance_score=item.relevance_score,
+        ))
+        top_for_intro.append({
             "rank": item.rank,
             "title": digest.title if digest else item.digest_id,
-            "summary": digest.summary if digest else "",
             "relevance_score": item.relevance_score,
-            "reasoning": item.reasoning,
-            "url": digest.url if digest else "",
         })
 
     logger.info("Generating email intro for %s on %s", name, today)
-
-    intro = email_agent.create_intro(name=name, date=today, top_articles=top_with_content)
+    intro = email_agent.create_intro(name=name, date=today, top_articles=top_for_intro)
 
     if not intro:
         logger.error("Failed to generate email intro.")
-        return
+        return None
 
-    # Print the full briefing
-    print(f"\n{'='*60}")
-    print(f"  AI News Briefing — {today}")
-    print(f"{'='*60}\n")
-    print(intro.introduction)
-    print(f"\n{'—'*60}\n")
+    briefing = EmailBriefing(
+        greeting=intro.greeting,
+        introduction=intro.introduction,
+        articles=briefing_articles,
+        total_ranked=len(ranked.articles),
+        top_n=len(briefing_articles),
+    )
 
-    for article in top_with_content:
-        print(f"#{article['rank']}  [{article['relevance_score']:.1f}/10]  {article['title']}")
-        print(f"     {article['summary']}")
-        print(f"     {article['url']}")
-        print()
+    print(briefing.to_markdown())
+    return briefing
 
 
 if __name__ == "__main__":

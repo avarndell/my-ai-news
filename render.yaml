@@ -2,7 +2,7 @@ databases:
   - name: ainews-db
     databaseName: ainews
     user: ainews
-    plan: starter
+    plan: free
 
 services:
   - type: cron

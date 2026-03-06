@@ -4,6 +4,7 @@ from app.runner import run
 from app.services.processor_anthropic import process_anthropic_markdown
 from app.services.processor_curator import process_curator
 from app.services.processor_digest import process_digest
+from app.services.processor_email import process_email
 from app.services.processor_youtube import process_youtube_transcripts
 
 
@@ -11,13 +12,14 @@ def main():
     parser = argparse.ArgumentParser(description="AI News pipeline")
     parser.add_argument(
         "command",
-        choices=["scrape", "process:anthropic", "process:youtube", "process:digest", "process:curator"],
+        choices=["scrape", "process:anthropic", "process:youtube", "process:digest", "process:curator", "process:email"],
         help=(
             "scrape            — fetch and store new articles/videos\n"
             "process:anthropic — extract markdown from Anthropic articles\n"
             "process:youtube   — fetch YouTube transcripts\n"
             "process:digest    — generate AI summaries for all unprocessed items\n"
-            "process:curator   — rank recent digests by user profile relevance"
+            "process:curator   — rank recent digests by user profile relevance\n"
+            "process:email     — generate ranked email briefing with intro"
         ),
     )
     parser.add_argument(
@@ -43,6 +45,11 @@ def main():
         if args.profile:
             kwargs["profile"] = args.profile
         process_curator(**kwargs)
+    elif args.command == "process:email":
+        kwargs = {"hours": args.hours}
+        if args.profile:
+            kwargs["profile"] = args.profile
+        process_email(**kwargs)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-# my-ai-news
+# AI News 
 
 A self-hosted daily AI news briefing pipeline. Every morning it scrapes AI news from Anthropic, OpenAI, and YouTube, generates AI-powered summaries, ranks them against a reader profile, and delivers a personalized email digest.
 

@@ -1,11 +1,7 @@
 import logging
 import os
 import smtplib
-import sys
 from email.message import EmailMessage
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from dotenv import load_dotenv
 
@@ -47,23 +43,6 @@ def _briefing_to_html(briefing: EmailBriefing) -> str:
 </html>"""
 
 
-def send_email(subject: str, body: str, to: str) -> None:
-    sender = os.getenv("EMAIL_SENDER")
-    password = os.getenv("GMAIL_APP_PASSWORD")
-
-    msg = EmailMessage()
-    msg["Subject"] = subject
-    msg["From"] = sender
-    msg["To"] = to
-    msg.set_content(body)
-
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-        smtp.login(user=sender, password=password)
-        smtp.send_message(msg)
-
-    logger.info("Email sent to %s", to)
-
-
 def send_briefing(briefing: EmailBriefing, to: str | None = None) -> None:
     sender = os.getenv("EMAIL_SENDER")
     recipient = to or sender
@@ -80,11 +59,3 @@ def send_briefing(briefing: EmailBriefing, to: str | None = None) -> None:
         smtp.send_message(msg)
 
     logger.info("Briefing sent to %s", recipient)
-
-
-if __name__ == "__main__":
-    send_email(
-        subject="Test email from Python",
-        body="This is a test email sent from a Python script using smtplib.",
-        to=os.getenv("EMAIL_SENDER"),
-    )

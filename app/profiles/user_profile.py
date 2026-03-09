@@ -1,6 +1,6 @@
 PROFILES: dict[str, dict] = {
-    "alex": {
-        "name": "Alex",
+    "annette": {
+        "name": "Annette",
         "background": "Software engineer with 10+ years of experience building production applications. Currently focused on AI-powered products and developer tooling. Actively building with LLM APIs on a daily basis.",
         "expertise_level": "Advanced",
         "interests": [
@@ -27,7 +27,7 @@ PROFILES: dict[str, dict] = {
     },
 }
 
-DEFAULT_PROFILE = "alex"
+DEFAULT_PROFILE = "annette"
 
 
 def get_profile(name: str = DEFAULT_PROFILE) -> str:

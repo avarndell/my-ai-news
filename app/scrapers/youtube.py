@@ -1,7 +1,7 @@
 import logging
 import os
 from datetime import datetime, timedelta, timezone
-from typing import Optional, List
+from typing import Optional
 
 import feedparser
 from dotenv import load_dotenv
@@ -15,15 +15,6 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 _RSS_URL = "https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
-
-
-def _build_proxy_config() -> WebshareProxyConfig | None:
-    username = os.getenv("WEBSHARE_PROXY_USERNAME")
-    password = os.getenv("WEBSHARE_PROXY_PASSWORD")
-    if username and password:
-        logger.info("YouTube: using Webshare proxy")
-        return WebshareProxyConfig(proxy_username=username, proxy_password=password)
-    return None
 
 
 class ChannelVideo(BaseModel):
@@ -41,33 +32,27 @@ class Transcript(BaseModel):
 
 class YouTubeScraper:
     """Scraper for YouTube channels and video transcripts (no API key required)."""
+
     def __init__(self):
         proxy_config = None
         proxy_username = os.getenv("WEBSHARE_PROXY_USERNAME")
         proxy_password = os.getenv("WEBSHARE_PROXY_PASSWORD")
-        
+
         if proxy_username and proxy_password:
             logger.info("YouTubeScraper: using proxy configuration")
             proxy_config = WebshareProxyConfig(proxy_username=proxy_username, proxy_password=proxy_password)
-                    
-        self.transcript_api = YouTubeTranscriptApi(proxy_config= proxy_config)
 
-    def fetch_recent_videos(
-        self, channel_id: str, hours: int = 24
-    ) -> list[ChannelVideo]:
-        """
-        Fetch videos published in the last `hours` hours for the given channel ID
-        using the YouTube RSS feed.
-        """
+        self.transcript_api = YouTubeTranscriptApi(proxy_config=proxy_config)
+
+    def fetch_recent_videos(self, channel_id: str, hours: int = 24) -> list[ChannelVideo]:
+        """Fetch videos published in the last `hours` hours for the given channel ID."""
         rss_url = _RSS_URL.format(channel_id=channel_id)
         logger.info("Fetching RSS feed: %s", rss_url)
 
         feed = feedparser.parse(rss_url)
 
         if not feed.entries and feed.bozo:
-            raise ValueError(
-                f"Failed to parse RSS feed for {channel_id}: {feed.bozo_exception}"
-            )
+            raise ValueError(f"Failed to parse RSS feed for {channel_id}: {feed.bozo_exception}")
 
         cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
         recent: list[ChannelVideo] = []
@@ -90,39 +75,24 @@ class YouTubeScraper:
                 )
             )
 
-        logger.info(
-            "Channel %s: %d video(s) in the last %d hours",
-            channel_id,
-            len(recent),
-            hours,
-        )
+        logger.info("Channel %s: %d video(s) in the last %d hours", channel_id, len(recent), hours)
         return recent
 
-    def get_transcript(
-        self, video_id: str, languages: tuple[str, ...] = ("en",)
-    ) -> Transcript | None:
-        """
-        Fetch the transcript for a video.
-        Returns None if the transcript is unavailable or blocked.
-        """
+    def get_transcript(self, video_id: str, languages: tuple[str, ...] = ("en",)) -> Transcript | None:
+        """Fetch the transcript for a video. Returns None if unavailable or blocked."""
         try:
-            fetched = YouTubeTranscriptApi(proxy_config=_build_proxy_config()).fetch(video_id, languages=languages)
+            fetched = self.transcript_api.fetch(video_id, languages=languages)
             text = " ".join(snippet.text for snippet in fetched)
             return Transcript(text=text)
         except CouldNotRetrieveTranscript as exc:
             logger.warning("No transcript for %s: %s", video_id, exc)
             return None
         except Exception as exc:
-            logger.error(
-                "Unexpected error fetching transcript for %s: %s", video_id, exc
-            )
+            logger.error("Unexpected error fetching transcript for %s: %s", video_id, exc)
             return None
 
     def fetch_transcript(self, video_id: str) -> Transcript:
-        """
-        Fetch the transcript for a video.
-        Raises ValueError if the transcript is unavailable.
-        """
+        """Fetch the transcript for a video. Raises ValueError if unavailable."""
         transcript = self.get_transcript(video_id)
         if transcript is None:
             raise ValueError(f"No transcript available for video: {video_id}")
@@ -130,9 +100,12 @@ class YouTubeScraper:
 
 
 if __name__ == "__main__":
+    from typing import List
     scraper = YouTubeScraper()
     transcript: Transcript = scraper.get_transcript("jqd6_bbjhS8")
     print(transcript.text)
     channel_videos: List[ChannelVideo] = scraper.fetch_recent_videos(
         channel_id="UCn8ujwUInbJkBhffxqAPBVQ", hours=1000
     )
+    for v in channel_videos:
+        print(f"  [{v.published_at.date()}] {v.title}")

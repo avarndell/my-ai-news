@@ -14,8 +14,7 @@ from sqlalchemy.orm import Session  # used in type hint only
 
 from app.database.connection import get_session
 from app.database.models import AnthropicArticle, Digest, OpenAIArticle, YoutubeVideo
-from app.scrapers.anthropic import AnthropicArticle as AnthropicDTO
-from app.scrapers.openai import OpenAIArticle as OpenAIDTO
+from app.scrapers.base_rss_scraper import Article
 from app.scrapers.youtube import ChannelVideo
 
 logger = logging.getLogger(__name__)
@@ -33,7 +32,7 @@ class Repository:
     def __exit__(self, *args) -> None:
         self._cm.__exit__(*args)
 
-    def upsert_anthropic_articles(self, articles: Sequence[AnthropicDTO]) -> int:
+    def upsert_anthropic_articles(self, articles: Sequence[Article]) -> int:
         """Insert new Anthropic articles, skip duplicates (by guid). Returns insert count."""
         if not articles:
             return 0
@@ -77,7 +76,7 @@ class Repository:
             article.markdown = markdown
             self.session.commit()
 
-    def upsert_openai_articles(self, articles: Sequence[OpenAIDTO]) -> int:
+    def upsert_openai_articles(self, articles: Sequence[Article]) -> int:
         """Insert new OpenAI articles, skip duplicates (by guid). Returns insert count."""
         if not articles:
             return 0
@@ -158,29 +157,25 @@ class Repository:
 
     # ── Digest ────────────────────────────────────────────────────────────────
 
-    def _digested_ids(self, source_type: str) -> set[int]:
-        stmt = select(Digest.source_id).where(Digest.source_type == source_type)
-        return set(self.session.execute(stmt).scalars())
+    def _digested_subquery(self, source_type: str):
+        return select(Digest.source_id).where(Digest.source_type == source_type).scalar_subquery()
 
     def get_undigested_anthropic_articles(self) -> list[AnthropicArticle]:
-        done = self._digested_ids("anthropic")
         stmt = select(AnthropicArticle).where(
-            AnthropicArticle.id.not_in(done) if done else True
+            AnthropicArticle.id.not_in(self._digested_subquery("anthropic"))
         )
         return list(self.session.execute(stmt).scalars())
 
     def get_undigested_openai_articles(self) -> list[OpenAIArticle]:
-        done = self._digested_ids("openai")
         stmt = select(OpenAIArticle).where(
-            OpenAIArticle.id.not_in(done) if done else True
+            OpenAIArticle.id.not_in(self._digested_subquery("openai"))
         )
         return list(self.session.execute(stmt).scalars())
 
     def get_undigested_youtube_videos(self) -> list[YoutubeVideo]:
-        done = self._digested_ids("youtube")
         stmt = select(YoutubeVideo).where(
             YoutubeVideo.transcript.isnot(None),
-            YoutubeVideo.id.not_in(done) if done else True,
+            YoutubeVideo.id.not_in(self._digested_subquery("youtube")),
         )
         return list(self.session.execute(stmt).scalars())
 

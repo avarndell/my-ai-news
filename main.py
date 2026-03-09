@@ -1,8 +1,7 @@
 import sys
 from pathlib import Path
 
-# python has issues with relative imports in scripts, so we add the project root to the path to allow absolute imports to work
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).parent))
 
 from app.daily_runner import run_daily_pipeline
 
@@ -12,8 +11,6 @@ def main(hours: int = 24, top_n: int = 10):
 
 
 if __name__ == "__main__":
-    import sys
-
     hours = 24
     top_n = 10
 

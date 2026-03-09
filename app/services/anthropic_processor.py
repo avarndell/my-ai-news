@@ -3,7 +3,6 @@ import logging
 from app.database.repository import Repository
 from app.scrapers.anthropic import AnthropicScraper
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -26,4 +25,7 @@ def process_anthropic_markdown() -> None:
 
 
 if __name__ == "__main__":
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
     process_anthropic_markdown()

@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.agents.curator_agent import CuratorAgent
 from app.agents.email_agent import BriefingArticle, EmailAgent, EmailBriefing
-from app.agents.user_profile import DEFAULT_PROFILE, PROFILES
+from app.profiles.user_profile import DEFAULT_PROFILE, PROFILES
 from app.database.repository import Repository
 from app.services.email_sender import send_briefing
 

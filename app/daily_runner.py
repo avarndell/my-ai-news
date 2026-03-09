@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 def run_daily_pipeline(hours: int = 24, top_n: int = 10) -> dict:
     try:
-        alembic_cfg = Config(Path(__file__).parent.parent / "alembic.ini")
+        alembic_cfg = Config(Path(__file__).resolve().parent.parent / "alembic.ini")
         command.upgrade(alembic_cfg, "head")
         logger.info("Database migrations applied")
     except Exception as exc:

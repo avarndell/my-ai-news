@@ -1,11 +1,9 @@
 import logging
-import os
 
-from openai import OpenAI
 from pydantic import BaseModel, Field
-from typing import List
 
-from app.agents.user_profile import DEFAULT_PROFILE, get_profile
+from app.agents.base_agent import BaseAgent
+from app.profiles.user_profile import DEFAULT_PROFILE, get_profile
 
 logger = logging.getLogger(__name__)
 
@@ -43,14 +41,10 @@ class RankedArticle(BaseModel):
 
 
 class RankedDigestList(BaseModel):
-    articles: List[RankedArticle] = Field(description="List of ranked articles")
+    articles: list[RankedArticle] = Field(description="List of ranked articles")
 
 
-class CuratorAgent:
-    def __init__(self):
-        self.client = OpenAI(api_key=os.getenv("OPENAPI_API_KEY"))
-        self.model = os.getenv("OPENAPI_MODEL")
-
+class CuratorAgent(BaseAgent):
     def score(
         self, digests: list[dict], profile: str = DEFAULT_PROFILE
     ) -> RankedDigestList | None:

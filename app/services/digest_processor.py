@@ -1,21 +1,13 @@
 import logging
 
-from typing import Optional
-import sys
-from pathlib import Path
-
-# python has issues with relative imports in scripts, so we add the project root to the path to allow absolute imports to work
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
 from app.agents.digest_agent import DigestAgent
 from app.database.repository import Repository
 from app.services.youtube_processor import TRANSCRIPT_UNAVAILABLE
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def process_digest(limit: Optional[int] = None) -> dict:
+def process_digest() -> None:
     """Generate digest summaries for all unprocessed articles and videos."""
     agent = DigestAgent()
 
@@ -71,5 +63,7 @@ def process_digest(limit: Optional[int] = None) -> dict:
 
 
 if __name__ == "__main__":
-    result = process_digest()
-    print(f"Processed: {result.get('processed', 0)}")
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+    process_digest()

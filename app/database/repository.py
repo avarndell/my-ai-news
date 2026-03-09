@@ -14,8 +14,7 @@ from sqlalchemy.orm import Session  # used in type hint only
 
 from app.database.connection import get_session
 from app.database.models import AnthropicArticle, Digest, OpenAIArticle, YoutubeVideo
-from app.scrapers.anthropic import AnthropicArticle as AnthropicDTO
-from app.scrapers.openai import OpenAIArticle as OpenAIDTO
+from app.scrapers.base_rss_scraper import Article
 from app.scrapers.youtube import ChannelVideo
 
 logger = logging.getLogger(__name__)
@@ -33,7 +32,7 @@ class Repository:
     def __exit__(self, *args) -> None:
         self._cm.__exit__(*args)
 
-    def upsert_anthropic_articles(self, articles: Sequence[AnthropicDTO]) -> int:
+    def upsert_anthropic_articles(self, articles: Sequence[Article]) -> int:
         """Insert new Anthropic articles, skip duplicates (by guid). Returns insert count."""
         if not articles:
             return 0
@@ -77,7 +76,7 @@ class Repository:
             article.markdown = markdown
             self.session.commit()
 
-    def upsert_openai_articles(self, articles: Sequence[OpenAIDTO]) -> int:
+    def upsert_openai_articles(self, articles: Sequence[Article]) -> int:
         """Insert new OpenAI articles, skip duplicates (by guid). Returns insert count."""
         if not articles:
             return 0
@@ -158,29 +157,25 @@ class Repository:
 
     # ── Digest ────────────────────────────────────────────────────────────────
 
-    def _digested_ids(self, source_type: str) -> set[int]:
-        stmt = select(Digest.source_id).where(Digest.source_type == source_type)
-        return set(self.session.execute(stmt).scalars())
+    def _digested_subquery(self, source_type: str):
+        return select(Digest.source_id).where(Digest.source_type == source_type).scalar_subquery()
 
     def get_undigested_anthropic_articles(self) -> list[AnthropicArticle]:
-        done = self._digested_ids("anthropic")
         stmt = select(AnthropicArticle).where(
-            AnthropicArticle.id.not_in(done) if done else True
+            AnthropicArticle.id.not_in(self._digested_subquery("anthropic"))
         )
         return list(self.session.execute(stmt).scalars())
 
     def get_undigested_openai_articles(self) -> list[OpenAIArticle]:
-        done = self._digested_ids("openai")
         stmt = select(OpenAIArticle).where(
-            OpenAIArticle.id.not_in(done) if done else True
+            OpenAIArticle.id.not_in(self._digested_subquery("openai"))
         )
         return list(self.session.execute(stmt).scalars())
 
     def get_undigested_youtube_videos(self) -> list[YoutubeVideo]:
-        done = self._digested_ids("youtube")
         stmt = select(YoutubeVideo).where(
             YoutubeVideo.transcript.isnot(None),
-            YoutubeVideo.id.not_in(done) if done else True,
+            YoutubeVideo.id.not_in(self._digested_subquery("youtube")),
         )
         return list(self.session.execute(stmt).scalars())
 
@@ -188,10 +183,21 @@ class Repository:
         cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=hours)
         stmt = (
             select(Digest)
-            .where(Digest.published_at >= cutoff)
+            .where(Digest.published_at >= cutoff, Digest.emailed_at.is_(None))
             .order_by(Digest.published_at.desc())
         )
         return list(self.session.execute(stmt).scalars())
+
+    def mark_digests_emailed(self, digest_ids: list[int]) -> None:
+        """Stamp emailed_at on digests that were included in the sent email."""
+        if not digest_ids:
+            return
+        now = datetime.now(tz=timezone.utc)
+        for digest in self.session.execute(
+            select(Digest).where(Digest.id.in_(digest_ids))
+        ).scalars():
+            digest.emailed_at = now
+        self.session.commit()
 
     def save_digest(
         self, source_type: str, source_id: int, url: str, title: str, summary: str,

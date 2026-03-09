@@ -16,6 +16,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from alembic import command
+from alembic.config import Config
 from app.runner import run
 from app.services.anthropic_processor import process_anthropic_markdown
 from app.services.digest_processor import process_digest
@@ -31,15 +33,24 @@ logger = logging.getLogger(__name__)
 
 
 def run_daily_pipeline(hours: int = 24, top_n: int = 10) -> dict:
-    logger.info("=== Pipeline started (lookback: %dh) ===", hours)
+    try:
+        alembic_cfg = Config(Path(__file__).resolve().parent.parent / "alembic.ini")
+        command.upgrade(alembic_cfg, "head")
+        logger.info("Database migrations applied")
+    except Exception as exc:
+        logger.error("Database migration failed: %s", exc)
+        return {"success": False, "error": str(exc)}
 
+    logger.info("=== Pipeline started (lookback: %dh) ===", hours)
     # Step 1 — Scrape
     logger.info("--- Step 1: Scraping sources ---")
     try:
         result = run(hours=hours)
         logger.info(
             "Scraped — Anthropic: %d, OpenAI: %d, YouTube: %d",
-            len(result.anthropic), len(result.openai), len(result.youtube),
+            len(result.anthropic),
+            len(result.openai),
+            len(result.youtube),
         )
     except Exception as exc:
         logger.error("Scrape failed: %s", exc)

@@ -3,8 +3,9 @@ from dataclasses import dataclass
 
 from app.config import YOUTUBE_CHANNELS
 from app.database.repository import Repository
-from app.scrapers.anthropic import AnthropicArticle, AnthropicScraper
-from app.scrapers.openai import OpenAIArticle, OpenAIScraper
+from app.scrapers.anthropic import AnthropicScraper
+from app.scrapers.base_rss_scraper import Article
+from app.scrapers.openai import OpenAIScraper
 from app.scrapers.youtube import ChannelVideo, YouTubeScraper
 
 logging.basicConfig(level=logging.INFO)
@@ -13,8 +14,8 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class RunResult:
-    anthropic: list[AnthropicArticle]
-    openai: list[OpenAIArticle]
+    anthropic: list[Article]
+    openai: list[Article]
     youtube: list[ChannelVideo]
 
 

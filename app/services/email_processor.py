@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.agents.curator_agent import CuratorAgent
 from app.agents.email_agent import BriefingArticle, EmailAgent, EmailBriefing
-from app.agents.user_profile import DEFAULT_PROFILE, PROFILES
+from app.profiles.user_profile import DEFAULT_PROFILE, PROFILES
 from app.database.repository import Repository
 from app.services.email_sender import send_briefing
 
@@ -92,6 +92,12 @@ def process_email(hours: int = 24, profile: str = DEFAULT_PROFILE, top_n: int = 
     )
 
     send_briefing(briefing)
+
+    sent_ids = [digest_lookup[item.digest_id].id for item in top_articles if item.digest_id in digest_lookup]
+    with Repository() as repo:
+        repo.mark_digests_emailed(sent_ids)
+    logger.info("Marked %d digest(s) as emailed.", len(sent_ids))
+
     return briefing
 
 

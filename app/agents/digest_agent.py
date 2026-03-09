@@ -1,11 +1,8 @@
 import logging
-import os
 
-from dotenv import load_dotenv
-from openai import OpenAI
 from pydantic import BaseModel
 
-load_dotenv()
+from app.agents.base_agent import BaseAgent
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +22,7 @@ Rules:
 - Avoid marketing fluff - focus on substance"""
 
 
-class DigestAgent:
-    def __init__(self):
-        self.client = OpenAI(api_key=os.getenv("OPENAPI_API_KEY"))
-        self.model = os.getenv("OPENAPI_MODEL")
-
+class DigestAgent(BaseAgent):
     def create_digest(self, content: str, source_title: str) -> DigestOutput | None:
         """
         Call the OpenAI Responses API to generate a digest title and summary.

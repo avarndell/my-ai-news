@@ -1,15 +1,9 @@
 import logging
-import sys
-from pathlib import Path
-
-# python has issues with relative imports in scripts, so we add the project root to the path to allow absolute imports to work
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.agents.curator_agent import CuratorAgent
-from app.agents.user_profile import DEFAULT_PROFILE
+from app.profiles.user_profile import DEFAULT_PROFILE
 from app.database.repository import Repository
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -48,11 +42,7 @@ def process_curator(hours: int = 24, profile: str = DEFAULT_PROFILE) -> None:
         return
 
     ranked = sorted(result.articles, key=lambda a: a.rank)
-
-    # Build a lookup so we can print the URL alongside each ranked item
-    digest_by_compound_id = {
-        f"{d.source_type}:{d.id}": d for d in digests
-    }
+    digest_by_compound_id = {f"{d.source_type}:{d.id}": d for d in digests}
 
     print(f"\n=== Ranked Briefing for '{profile}' (last {hours}h) ===\n")
     for item in ranked:
@@ -65,4 +55,7 @@ def process_curator(hours: int = 24, profile: str = DEFAULT_PROFILE) -> None:
 
 
 if __name__ == "__main__":
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
     process_curator(hours=24)

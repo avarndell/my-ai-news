@@ -1,9 +1,8 @@
 import logging
-import os
-from typing import List
 
-from openai import OpenAI
 from pydantic import BaseModel, Field
+
+from app.agents.base_agent import BaseAgent
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +31,7 @@ class BriefingArticle(BaseModel):
 class EmailBriefing(BaseModel):
     greeting: str
     introduction: str
-    articles: List[BriefingArticle]
+    articles: list[BriefingArticle]
     total_ranked: int = Field(description="Total number of articles ranked by the curator")
     top_n: int = Field(description="Number of articles included in this briefing")
 
@@ -61,11 +60,7 @@ class EmailBriefing(BaseModel):
         return "\n".join(lines)
 
 
-class EmailAgent:
-    def __init__(self):
-        self.client = OpenAI(api_key=os.getenv("OPENAPI_API_KEY"))
-        self.model = os.getenv("OPENAPI_MODEL")
-
+class EmailAgent(BaseAgent):
     def create_intro(self, name: str, date: str, top_articles: list[dict]) -> EmailIntro | None:
         articles_text = "\n".join(
             f"{a['rank']}. {a['title']} (score: {a['relevance_score']:.1f})"

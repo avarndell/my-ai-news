@@ -1,14 +1,8 @@
 import logging
-import sys
-from pathlib import Path
-
-# python has issues with relative imports in scripts, so we add the project root to the path to allow absolute imports to work
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.database.repository import Repository
 from app.scrapers.youtube import YouTubeScraper
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 TRANSCRIPT_UNAVAILABLE = "UNAVAILABLE"
@@ -33,4 +27,7 @@ def process_youtube_transcripts() -> None:
 
 
 if __name__ == "__main__":
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
     process_youtube_transcripts()

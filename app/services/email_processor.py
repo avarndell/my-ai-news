@@ -92,6 +92,12 @@ def process_email(hours: int = 24, profile: str = DEFAULT_PROFILE, top_n: int = 
     )
 
     send_briefing(briefing)
+
+    sent_ids = [digest_lookup[item.digest_id].id for item in top_articles if item.digest_id in digest_lookup]
+    with Repository() as repo:
+        repo.mark_digests_emailed(sent_ids)
+    logger.info("Marked %d digest(s) as emailed.", len(sent_ids))
+
     return briefing
 
 

@@ -16,8 +16,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.database.connection import engine
-from app.database.models import Base
+from alembic import command
+from alembic.config import Config
 from app.runner import run
 from app.services.anthropic_processor import process_anthropic_markdown
 from app.services.digest_processor import process_digest
@@ -34,11 +34,11 @@ logger = logging.getLogger(__name__)
 
 def run_daily_pipeline(hours: int = 24, top_n: int = 10) -> dict:
     try:
-        with engine.begin():
-            Base.metadata.create_all(engine)
-            logger.info("Database tables verified/created")
+        alembic_cfg = Config(Path(__file__).parent.parent / "alembic.ini")
+        command.upgrade(alembic_cfg, "head")
+        logger.info("Database migrations applied")
     except Exception as exc:
-        logger.error("Database table creation failed: %s", exc)
+        logger.error("Database migration failed: %s", exc)
         return {"success": False, "error": str(exc)}
 
     logger.info("=== Pipeline started (lookback: %dh) ===", hours)

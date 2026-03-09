@@ -188,10 +188,21 @@ class Repository:
         cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=hours)
         stmt = (
             select(Digest)
-            .where(Digest.published_at >= cutoff)
+            .where(Digest.published_at >= cutoff, Digest.emailed_at.is_(None))
             .order_by(Digest.published_at.desc())
         )
         return list(self.session.execute(stmt).scalars())
+
+    def mark_digests_emailed(self, digest_ids: list[int]) -> None:
+        """Stamp emailed_at on digests that were included in the sent email."""
+        if not digest_ids:
+            return
+        now = datetime.now(tz=timezone.utc)
+        for digest in self.session.execute(
+            select(Digest).where(Digest.id.in_(digest_ids))
+        ).scalars():
+            digest.emailed_at = now
+        self.session.commit()
 
     def save_digest(
         self, source_type: str, source_id: int, url: str, title: str, summary: str,

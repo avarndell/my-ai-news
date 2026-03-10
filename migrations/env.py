@@ -15,7 +15,7 @@ from app.database.models import Base  # noqa: E402
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # Use DATABASE_URL env var if set (Render/production), else fall back to alembic.ini
 if db_url := os.getenv("DATABASE_URL"):
